@@ -33,11 +33,8 @@ class population:
     def __getitem__(self, key):
         return self.x[key]
     
-    def shuffle(self):
-        random.shuffle(self.x)
-
     def next_generation(self, crossover_func, k, fitness_func):
-        self.shuffle()                                                   # 1. shuffle
+        random.shuffle(self.x)                                           # 1. shuffle
         parents  = list(zip(self.x[:-1:2], self.x[1::2]))                # 2. pair up
         families = [(*p,*crossover_func(*p, k)) for p in parents]        # 3. family
         next_pop  = [sorted(f, key=fitness_func)[:-2] for f in families] # 4. fight to the death
