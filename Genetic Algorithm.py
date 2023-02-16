@@ -1,8 +1,6 @@
 import numpy as np
 import random
 
-N = 10 # chromosome length
-M = 16 # population size
 
 # member object
 class chromosome:
@@ -17,9 +15,15 @@ class chromosome:
 
 
 class population:
-    def __init__(self, x=None):
+    N : int
+    M : int
+    gen : int
+    def __init__(self, M, N, gen, x=None):
+        self.N = N
+        self.M = M
+        self.gen = gen
         if x == None:
-            self.x = [random_chromosome() for i in range(M)]
+            self.x = [random_chromosome(N) for i in range(M)]
         else:
             self.x = x
 
@@ -32,61 +36,116 @@ class population:
     def shuffle(self):
         random.shuffle(self.x)
 
-    def next_generation(self):
-        self.shuffle()                                                 # 1. shuffle
-        # print(population(self.x))
-        parents  = list(zip(self.x[:-1:2], self.x[1::2]))              # 2. pair up
-        # print(population(parents))
-        families = [(*p,*crossover_uniform(*p, 0.1)) for p in parents] # 3. family
-        # print(population(families))
-        next_pop  = [sorted(f, key=objective)[:-2] for f in families]  # 4. fight to the death
+    def next_generation(self, crossover_func, k, fitness_func):
+        self.shuffle()                                                   # 1. shuffle
+        parents  = list(zip(self.x[:-1:2], self.x[1::2]))                # 2. pair up
+        families = [(*p,*crossover_func(*p, k)) for p in parents]        # 3. family
+        next_pop  = [sorted(f, key=fitness_func)[:-2] for f in families] # 4. fight to the death
         next_pop = [item for sublist in next_pop for item in sublist]
-        # print(population(next_pop))
-        return population(next_pop) # return a new population
+        return population(next_pop, self.M, self.N, self.gen+1) # return a new population
 
-            
-# def random_chromosome():
-    #  return chromosome([bool(random.randrange(0, 2)) for _ in range(N)])
+    def best_fitness(self, fitness_func):
+        np.max([fitness_func(c) for c in self.x])
 
-def random_chromosome(): # even shorter!
+
+class genetic_algorithm:
+    N : int # chromosome length
+    M : int # population size
+    (best_fitness, best_gen) : tuple
+    pop : population
+    crossover_func : function
+    k : float
+    fitness_func : function
+
+    def __init__(self, N, M, crossover_func, k, fitness_func):
+        self.N = N
+        self.M = M
+        self.crossover_func = crossover_func
+        self.k = k
+        self.fitness_func = fitness_func
+        self.population = population(M, N)
+        best_fitness = 0
+    def stopping_criteria(self):
+        return np.any([0 not in c.x for c in self.pop.x]) or (self.pop.gen >= self.best_gen + 10)
+    def run_experiment(self):
+
+        # TODO UNFINISHED
+        # passing_by function for all the collecting of info
+
+        # new gen loop
+        new_pop = self.pop.next_generation(self.crossover_func, self.k, self.fitness_func)
+        new_fitness = new_pop.best_fitness(self.fitness_func)
+        if new_fitness > self.best_fitness: # BIG ASS TODO - TEXT UNCLEAR
+            self.best_gen = new_pop.gen
+            self.best_fitness = new_fitness
+        self.pop = new_pop
+
+
+# bisection search
+# early stopping
+
+
+def random_chromosome(N): # even shorter!
     return chromosome(np.random.rand(N) < 0.5)
-    
-# def crossover_uniform(x1, x2, k):
-#     y1 = np.zeros(N)
-#     y2 = np.zeros(N)
-#     for i in range(N):
-#         if random.random() < k: # crossover
-#             y1[i] = x2[i]
-#             y2[i] = x1[i]
-#         else:                   # not crossover
-#             y1[i] = x1[i]
-#             y2[i] = x2[i]
-#     return chromosome(y1), chromosome(y2)
 
-def crossover_uniform(x1, x2, k): # also even shorter!
+def crossover_uniform(x1, x2, N, k=0.05): # also even shorter!
     bs = np.random.rand(N) < 0.5
     y1 = [x1[i] if bs[i] else x2[i] for i in range(len(bs))]
     y2 = [x2[i] if bs[i] else x1[i] for i in range(len(bs))]
     return chromosome(y1), chromosome(y2)
 
-# shit code ahead. WARNING. APPROACH WITH CAUTION
-def crossover_2point(x1, x2):
+def crossover_2point(x1, x2, N, k=0):
     split1 = random.randrange(0,N); split2 = random.randrange(0,N)
     minsplit = min(split1, split2); maxsplit = max(split1, split2)
     y1 = [x1[i] for i in range(0, minsplit)] + [x2[i] for i in range(minsplit, maxsplit)] + [x1[i] for i in range(maxsplit, N)] # from the minimum split value to the maximum split value, the values are swapped
     y2 = [x2[i] for i in range(0, minsplit)] + [x1[i] for i in range(minsplit, maxsplit)] + [x2[i] for i in range(maxsplit, N)]
     return chromosome(y1), chromosome(y2)
-    
 
-# objective function
-def objective(x):
-	return sum(x)
+
+def counting_ones(x):
+    return sum(x)
+
+def trap_deceptive_linked(x):
+    return trap(x, k=4, d=1, linked=True)
+
+def trap_nondeceptive_linked(x):
+    return trap(x, k=4, d=2.5, linked=True)
+
+def trap_deceptive_unlinked(x):
+    return trap(x, k=4, d=1, linked=False)
+
+def trap_nondeceptive_unlinked(x):
+    return trap(x, k=4, d=2.5, linked=False)
+
+def trap(c, k, d, linked):
+    # divide x into blocks of k
+    x = c.x
+    blocks = linked_block(x,k) if linked else unlinked_block(x,k)
+
+    fitness = 0
+    for block in blocks:
+        if counting_ones(block) == k:
+            fitness += k
+        else:
+            fitness += k - d - (k-d)/(k-1)*counting_ones(block)
+    return fitness
+
+# TODO NP ARRAY?
+def linked_block(x, k):
+    l = len(x) // k
+    blocks = np.array_split(x, l)
+    return blocks
+
+def unlinked_block(x, k):
+    m = len(x) // k
+    blocks = [[] for _ in range(m)]
+    for i in range(len(x)):
+        blocks[i % m].append(x[i])
+    return blocks
+
 
 def main():
-    pep = population()
-    print(pep)
-
-    pep.next_generation()
+    return 0
 
 if __name__== "__main__":
     main()
