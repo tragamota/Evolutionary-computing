@@ -133,28 +133,28 @@ if __name__ == "__main__":
 
         print(run_experiment(fitness, mutation))
 
-    print(f"Trap deceptive tightly linked and Uniform crossover")
+    print(f"Trap deceptive not tightly linked and Uniform crossover")
     for _ in range(20):
-        fitness = Trap(k=4, d=1, tightly_linked=True)
+        fitness = Trap(k=4, d=1, tightly_linked=False)
         mutation = UniformCrossover()
 
         print(run_experiment(fitness, mutation))
 
-    print(f"Trap deceptive tightly linked and Two point crossover")
+    print(f"Trap deceptive not tightly linked and Two point crossover")
     for _ in range(20):
-        fitness =  Trap(k=4, d=1, tightly_linked=True)
+        fitness =  Trap(k=4, d=1, tightly_linked=False)
         mutation = TwoPointCrossover()
 
         print(run_experiment(fitness, mutation))
 
-    print(f"Trap deceptive tightly linked and Uniform crossover")
+    print(f"Trap deceptive not tightly linked and Uniform crossover")
     for _ in range(20):
         fitness = Trap(k=4, d=2.5, tightly_linked=False)
         mutation = UniformCrossover()
 
         print(run_experiment(fitness, mutation))
 
-    print(f"Trap deceptive tightly linked and Two point crossover")
+    print(f"Trap deceptive not tightly linked and Two point crossover")
     for _ in range(20):
         fitness = Trap(k=4, d=2.5, tightly_linked=False)
         mutation = TwoPointCrossover()
