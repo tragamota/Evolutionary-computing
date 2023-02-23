@@ -7,12 +7,12 @@ from mutation import UniformCrossover, TwoPointCrossover
 from structures import Population
 
 
-def found_optima(population):
-    return np.any([0 not in c.x for c in population])
+def found_global_optimum(population):
+    return np.any([0 not in c for c in population])
 
 
 def stopping_criteria(population, generation_info):
-    optima = found_optima(population)
+    optima = found_global_optimum(population)
     has_improvement = population.generation >= generation_info[0] + 10
 
     return optima or has_improvement
@@ -32,7 +32,7 @@ def run_experiment(fitness, mutation, population_size=10, solution_length=40):
         current_population = Population(current_population_size, solution_length, generation=0)
         generation_info = [0, best_fitness(current_population, fitness)]
 
-        while stopping_criteria(current_population, generation_info) == False:
+        while not stopping_criteria(current_population, generation_info):
             random.shuffle(current_population)
 
             parents = list(zip(current_population[:-1:2], current_population[1::2]))
@@ -60,7 +60,7 @@ def run_experiment(fitness, mutation, population_size=10, solution_length=40):
 
             current_population = next_generation
 
-        optimum_found = found_optima(current_population)
+        optimum_found = found_global_optimum(current_population)
         previous_population_size = current_population_size
         current_population_size *= 2
 

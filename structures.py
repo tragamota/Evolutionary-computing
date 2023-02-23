@@ -1,6 +1,7 @@
 import numpy as np
 
 
+# Chromosome
 class Solution:
     def __init__(self, x):
         self.x = self.random_solution(x) if type(x) == int else x
@@ -39,5 +40,3 @@ class Population:
 
     def __len__(self):
         return len(self.x)
-
-

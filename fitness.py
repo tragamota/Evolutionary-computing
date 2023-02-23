@@ -36,7 +36,7 @@ class Trap(FitnessInterface):
         self.counting_ones = CountingOne()
 
     def score(self, x):
-        blocks = create_linked_blocks(x, self.k) if self.tightly_linked else create_linked_blocks(x, self.k)
+        blocks = create_linked_blocks(x, self.k) if self.tightly_linked else create_unlinked_block(x, self.k)
 
         fitness = 0
 
