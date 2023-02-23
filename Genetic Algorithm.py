@@ -41,45 +41,53 @@ class population:
         next_pop = [item for sublist in next_pop for item in sublist]
         return population(next_pop, self.M, self.N, self.gen+1) # return a new population
 
-    def best_fitness(self, fitness_func):
-        np.max([fitness_func(c) for c in self.x])
+    def best_chromosome(self, fitness_func):
+        # np.max([fitness_func(c) for c in self.x])
+        sorted(self.x, key=fitness_func)[0]
 
 
 class genetic_algorithm:
     N : int # chromosome length
     M : int # population size
-    (best_fitness, best_gen) : tuple
+    (best_chromo, best_fitness, best_gen) : tuple
     pop : population
     crossover_func : function
     k : float
     fitness_func : function
 
-    def __init__(self, N, M, crossover_func, k, fitness_func):
-        self.N = N
+    def __init__(self, M, crossover_func, k, fitness_func):
+        self.N = 10
         self.M = M
         self.crossover_func = crossover_func
         self.k = k
         self.fitness_func = fitness_func
-        self.population = population(M, N)
-        best_fitness = 0
+        self.population = population(self.M, self.N)
+        self.best_fitness = 0
     def stopping_criteria(self):
         return np.any([0 not in c.x for c in self.pop.x]) or (self.pop.gen >= self.best_gen + 10)
     def run_experiment(self):
+        Ns = [False for i in range(128)] # 1 - 128 :: all values of N to try
+
 
         # TODO UNFINISHED
         # passing_by function for all the collecting of info
 
+        # bisection search thingy
         # new gen loop
         new_pop = self.pop.next_generation(self.crossover_func, self.k, self.fitness_func)
-        new_fitness = new_pop.best_fitness(self.fitness_func)
+        new_best_chromo = new_pop.best_chromosome(self.fitness_func)
+        new_fitness = self.fitness_func(new_best_chromo)
         if new_fitness > self.best_fitness: # BIG ASS TODO - TEXT UNCLEAR
             self.best_gen = new_pop.gen
             self.best_fitness = new_fitness
+            self.best_chromo = new_best_chromo
         self.pop = new_pop
+        if self.stopping_criteria:
+            return new_best_chromo
 
-
-# bisection search
-# early stopping
+# passer function. Collects data to plot / graph, puts it in a file, and passes the result through
+def collect_data():
+    pass
 
 
 def random_chromosome(N): # even shorter!
