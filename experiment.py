@@ -34,7 +34,7 @@ def run_generation(population_size, solution_length, fitness, mutation):
     while not stopping_criteria(current_population, generation_info):
         # one generation:
         random.shuffle(current_population)
-        parents = list(zip(current_population[:-1:2], current_population[1::2]))
+        parents = np.stack([current_population[:-1:2], current_population[1::2]], axis=1)
         families = [(p, mutation.mutate(*p)) for p in parents]
 
         next_pop = []

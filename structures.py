@@ -30,7 +30,7 @@ class Population:
         self.solution_length = solution_length
         self.generation = generation
 
-        self.x = x if x is not None else [Solution(solution_length) for i in range(self.population_size)]
+        self.x = x if x is not None else np.array([Solution(solution_length) for i in range(self.population_size)])
 
     def __getitem__(self, key):
         return self.x[key]
