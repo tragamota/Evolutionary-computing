@@ -17,8 +17,8 @@ class UniformCrossover(MutationInterface):
         assert len(x) is len(y)
 
         bs = np.random.rand(len(x)) < self.k
-        y1 = [x[i] if bs[i] else y[i] for i in range(len(bs))]
-        y2 = [y[i] if bs[i] else x[i] for i in range(len(bs))]
+        y1 = np.where(bs, x, y)
+        y2 = np.where(bs, y, x)
 
         return Solution(y1), Solution(y2)
 
@@ -36,9 +36,7 @@ class TwoPointCrossover(MutationInterface):
         max_split = max(split1, split2)
 
         # from the minimum split value to the maximum split value, the values are swapped
-        y1 = [x[i] for i in range(0, min_split)] + [y[i] for i in range(min_split, max_split)] + [x[i] for i in
-                                                                                                  range(max_split, N)]
-        y2 = [y[i] for i in range(0, min_split)] + [x[i] for i in range(min_split, max_split)] + [y[i] for i in
-                                                                                                  range(max_split, N)]
+        y1 = np.concatenate((x[:min_split], y[min_split:max_split], x[max_split:]))
+        y2 = np.concatenate((y[:min_split], x[min_split:max_split], y[max_split:]))
 
         return Solution(y1), Solution(y2)

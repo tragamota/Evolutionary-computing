@@ -24,7 +24,7 @@ class FitnessInterface:
 
 class CountingOne(FitnessInterface):
     def score(self, x):
-        return sum(x)
+        return np.sum(x)
 
 
 class Trap(FitnessInterface):
@@ -38,13 +38,21 @@ class Trap(FitnessInterface):
     def score(self, x):
         blocks = create_linked_blocks(x, self.k) if self.tightly_linked else create_unlinked_block(x, self.k)
 
-        fitness = 0
+        # fitness_old = 0
+        #
+        # for block in blocks:
+        #     if self.counting_ones.score(block) == self.k:
+        #         fitness_old += self.k
+        #     else:
+        #         fitness_old += self.k - self.d - (self.k - self.d) / (self.k - 1) * self.counting_ones.score(block)
 
-        for block in blocks:
-            if self.counting_ones.score(block) == self.k:
-                fitness += self.k
-            else:
-                fitness += self.k - self.d - (self.k - self.d) / (self.k - 1) * self.counting_ones.score(block)
+
+        block_scores = np.sum(blocks, axis=1)
+        mask = block_scores == self.k
+        fitness = np.sum(mask * self.k + (1 - mask) * (self.k - self.d - (self.k - self.d) / (self.k - 1) * block_scores))
+
+        # if not fitness_old == fitness:
+        #     print("fitness error function")
 
         return fitness
 
