@@ -10,13 +10,13 @@ class MutationInterface:
 
 
 class UniformCrossover(MutationInterface):
-    def __init__(self, k = 0.05):
+    def __init__(self, k=0.05):
         self.k = k
 
     def mutate(self, x, y):
         assert len(x) is len(y)
 
-        bs = np.random.rand(len(x)) < 0.5
+        bs = np.random.rand(len(x)) < self.k
         y1 = [x[i] if bs[i] else y[i] for i in range(len(bs))]
         y2 = [y[i] if bs[i] else x[i] for i in range(len(bs))]
 
