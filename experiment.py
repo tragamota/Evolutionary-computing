@@ -1,9 +1,10 @@
 import random
+import time
 
 import numpy as np
 
 from fitness import CountingOne, Trap
-from mutation import UniformCrossover, TwoPointCrossover
+from crossover import UniformCrossover, TwoPointCrossover
 from structures import Population
 
 
@@ -69,7 +70,9 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
     current_population_size = population_size
     previous_population_size = population_size
 
-    while current_population_size < max_population_size:
+    starting_time = time.perf_counter()
+
+    while current_population_size <= max_population_size:
         last_generation, generation_info = run_generation(current_population_size, solution_length, fitness, mutation)
 
         optimum_found = found_global_optimum(last_generation)
@@ -77,11 +80,16 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
         if optimum_found:
             break
 
-        previous_population_size = current_population_size
-        current_population_size *= 2
+        if current_population_size < max_population_size:
+            previous_population_size = current_population_size
+            current_population_size *= 2
+        else:
+            break
 
     if not optimum_found and current_population_size == max_population_size:
-        return False, current_population_size
+        end_time = time.perf_counter()
+
+        return False, current_population_size, (end_time - starting_time)
 
     upperbound = current_population_size
     lowerbound = previous_population_size
@@ -98,7 +106,12 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
         else:
             lowerbound = current_population_size
 
-    return True, current_population_size
+    end_time = time.perf_counter()
+
+    if not optimum_found:
+        current_population_size = upperbound
+
+    return True, current_population_size, (end_time - starting_time),
 
 
 if __name__ == "__main__":
