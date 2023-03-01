@@ -31,6 +31,8 @@ def run_generation(population_size, solution_length, fitness, mutation):
     current_population = Population(population_size, solution_length, generation=0)
     generation_info = [0, best_fitness(current_population, fitness)]  # (best gen, best fitness)
 
+    generations = []
+
     while not stopping_criteria(current_population, generation_info):
         # one generation:
         random.shuffle(current_population)
@@ -59,9 +61,11 @@ def run_generation(population_size, solution_length, fitness, mutation):
             generation_info[0] = next_generation.generation
             generation_info[1] = next_fitness
 
+        generations.append(current_population)
+
         current_population = next_generation
 
-    return current_population, generation_info
+    return current_population, generation_info, generations
 
 
 def run_experiment(fitness, mutation, population_size=10, max_population_size=1280, solution_length=40):
@@ -72,9 +76,11 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
 
     starting_time = time.perf_counter()
 
-    while current_population_size <= max_population_size:
-        last_generation, generation_info = run_generation(current_population_size, solution_length, fitness, mutation)
+    all_generations = []
 
+    while current_population_size <= max_population_size:
+        last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
+        all_generations.append(generations)
         optimum_found = found_global_optimum(last_generation)
 
         if optimum_found:
@@ -89,7 +95,7 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
     if not optimum_found and current_population_size == max_population_size:
         end_time = time.perf_counter()
 
-        return False, current_population_size, (end_time - starting_time)
+        return False, current_population_size, (end_time - starting_time), all_generations
 
     upperbound = current_population_size
     lowerbound = previous_population_size
@@ -97,7 +103,8 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
     while (upperbound - lowerbound) > population_size:
         current_population_size = lowerbound + (upperbound - lowerbound) // 2
 
-        last_generation, generation_info = run_generation(current_population_size, solution_length, fitness, mutation)
+        last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
+        all_generations.append(generations)
 
         optimum_found = found_global_optimum(last_generation)
 
@@ -111,7 +118,7 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
     if not optimum_found:
         current_population_size = upperbound
 
-    return True, current_population_size, (end_time - starting_time),
+    return True, current_population_size, (end_time - starting_time), all_generations
 
 
 if __name__ == "__main__":
@@ -185,5 +192,7 @@ if __name__ == "__main__":
         mutation = TwoPointCrossover()
 
         print(run_experiment(fitness, mutation))
+
+
 
 
