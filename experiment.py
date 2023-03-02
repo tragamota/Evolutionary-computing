@@ -37,20 +37,12 @@ def run_generation(population_size, solution_length, fitness, mutation):
         # one generation:
         random.shuffle(current_population)
         parents = list(zip(current_population[:-1:2], current_population[1::2]))
-        families = [(p, mutation.mutate(*p)) for p in parents]
-
-        next_pop = []
-        for parents, offspring in families:
-            for i in range(2):
-                if fitness.score(offspring[i]) >= fitness.score(parents[i]):
-                    next_pop.append(offspring[i])
-                else:
-                    next_pop.append(parents[i])
+        families = [(*p, *mutation.mutate(*p)) for p in parents]
 
         # fight to the death
         # Note: `sorted()` sorts in-order, meaning children will remain at the end of the list
-        # next_pop = [sorted(f, key=fitness.score)[:-2] for f in families]
-        # next_pop = [item for sublist in next_pop for item in sublist]
+        next_pop = [sorted(f, key=fitness.score)[-2:] for f in families]
+        next_pop = [item for sublist in next_pop for item in sublist]
 
         next_generation = Population(population_size, solution_length,
                                      generation=current_population.generation + 1, x=next_pop)
@@ -69,22 +61,25 @@ def run_generation(population_size, solution_length, fitness, mutation):
 
 
 def run_experiment(fitness, mutation, population_size=10, max_population_size=1280, solution_length=40):
-    global optimum_found
+    optimum_found = False
 
     current_population_size = population_size
     previous_population_size = population_size
 
-    starting_time = time.perf_counter()
-
-    all_generations = []
+    successful_runs = []
 
     while current_population_size <= max_population_size:
-        last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
-        all_generations.append(generations)
-        optimum_found = found_global_optimum(last_generation)
+        successful_runs = []
+        for i in range(20):
+            last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
+            optimum_found_run = found_global_optimum(last_generation)
+            successful_runs.append(optimum_found_run)
 
-        if optimum_found:
+        if np.sum(successful_runs) >= 19:
+            optimum_found = True
             break
+
+        print(current_population_size)
 
         if current_population_size < max_population_size:
             previous_population_size = current_population_size
@@ -93,105 +88,115 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
             break
 
     if not optimum_found and current_population_size == max_population_size:
-        end_time = time.perf_counter()
-
-        return False, current_population_size, (end_time - starting_time), all_generations
+        return False, np.sum(successful_runs), current_population_size
 
     upperbound = current_population_size
     lowerbound = previous_population_size
 
+    optimum_found = False
+
+    generation_count = 0
+    starting_time = 0
+
     while (upperbound - lowerbound) > population_size:
+        generation_count = 0
+        successful_runs = []
+        print(current_population_size)
         current_population_size = lowerbound + (upperbound - lowerbound) // 2
+        starting_time = time.perf_counter()
+        for i in range(20):
+            last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
+            optimum_found_run = found_global_optimum(last_generation)
+            if optimum_found_run:
+                generation_count += len(generations) / 20
+            successful_runs.append(optimum_found_run)
 
-        last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
-        all_generations.append(generations)
-
-        optimum_found = found_global_optimum(last_generation)
-
-        if optimum_found:
+        if np.sum(successful_runs) >= 19:
+            optimum_found = True
             upperbound = current_population_size
         else:
+            optimum_found = False
             lowerbound = current_population_size
-
-    end_time = time.perf_counter()
 
     if not optimum_found:
         current_population_size = upperbound
 
-    return True, current_population_size, (end_time - starting_time), all_generations
+        generation_count = 0
+        successful_runs = []
+        starting_time = time.perf_counter()
+        for i in range(20):
+            last_generation, generation_info, generations = run_generation(current_population_size, solution_length,
+                                                                           fitness, mutation)
+            optimum_found_run = found_global_optimum(last_generation)
+            generation_count += len(generations) / 20
+            successful_runs.append(optimum_found_run)
+
+    end_time = time.perf_counter()
+
+    return True, np.sum(successful_runs), current_population_size, generation_count, (end_time - starting_time) / 20
 
 
 if __name__ == "__main__":
 
     print(f"Counting ones and Uniform crossover")
-    for _ in range(20):
-        fitness = CountingOne()
-        mutation = UniformCrossover()
+    fitness = CountingOne()
+    mutation = UniformCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Counting ones and Two point crossover")
-    for _ in range(20):
-        fitness = CountingOne()
-        mutation = TwoPointCrossover()
+    fitness = CountingOne()
+    mutation = TwoPointCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap deceptive tightly linked and Uniform crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=1, tightly_linked=True)
-        mutation = UniformCrossover()
+    fitness = Trap(k=4, d=1, tightly_linked=True)
+    mutation = UniformCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap deceptive tightly linked and Two point crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=1, tightly_linked=True)
-        mutation = TwoPointCrossover()
+    fitness = Trap(k=4, d=1, tightly_linked=True)
+    mutation = TwoPointCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap non-deceptive tightly linked and Uniform crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=2.5, tightly_linked=True)
-        mutation = UniformCrossover()
+    fitness = Trap(k=4, d=2.5, tightly_linked=True)
+    mutation = UniformCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap non-deceptive tightly linked and Two point crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=2.5, tightly_linked=True)
-        mutation = TwoPointCrossover()
+    fitness = Trap(k=4, d=2.5, tightly_linked=True)
+    mutation = TwoPointCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap deceptive not tightly linked and Uniform crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=1, tightly_linked=False)
-        mutation = UniformCrossover()
+    fitness = Trap(k=4, d=1, tightly_linked=False)
+    mutation = UniformCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap deceptive not tightly linked and Two point crossover")
-    for _ in range(20):
-        fitness =  Trap(k=4, d=1, tightly_linked=False)
-        mutation = TwoPointCrossover()
+    fitness =  Trap(k=4, d=1, tightly_linked=False)
+    mutation = TwoPointCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap non-deceptive not tightly linked and Uniform crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=2.5, tightly_linked=False)
-        mutation = UniformCrossover()
+    fitness = Trap(k=4, d=2.5, tightly_linked=False)
+    mutation = UniformCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
     print(f"Trap non-deceptive not tightly linked and Two point crossover")
-    for _ in range(20):
-        fitness = Trap(k=4, d=2.5, tightly_linked=False)
-        mutation = TwoPointCrossover()
+    fitness = Trap(k=4, d=2.5, tightly_linked=False)
+    mutation = TwoPointCrossover()
 
-        print(run_experiment(fitness, mutation))
+    print(run_experiment(fitness, mutation))
 
 
 
