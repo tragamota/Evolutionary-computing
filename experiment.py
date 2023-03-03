@@ -30,6 +30,7 @@ def best_fitness(population, fitness):
 
 def run_generation(population_size, solution_length, fitness, mutation):
     global selection_decisions
+    global collect_data
 
     current_population = Population(population_size, solution_length, generation=0)
     generation_info = [0, best_fitness(current_population, fitness)]  # (best gen, best fitness)
@@ -52,15 +53,19 @@ def run_generation(population_size, solution_length, fitness, mutation):
         # 2. at those indices, did both who won have the same bit-value?
         # 3. if so, add to the respective summation. We just want to plot the absolute number.
         #    we only want to compare the two. No need to average or something
-        for i in range(len(families)): # a four-tuple (parent1, parent2, child1, child2)
-            par1 = families[i][0]
-            par2 = families[i][1]
-            win1 = _next_pop[i][0]
-            win2 = _next_pop[i][1]
-            for j in range(len(par1.x)):
-                if par1[j] != par2[j] and win1[j] == win2[j]:
-                    selection_decisions[win1[j]] += 1
-        # TODO NOW DO IT BASED ON GENERATIONS!!
+        if collect_data:
+            gen = current_population.generation
+            while len(selection_decisions) < gen + 1:
+                selection_decisions.append([0,0])
+            for i in range(len(families)): # a four-tuple (parent1, parent2, child1, child2)
+                par1 = families[i][0]
+                par2 = families[i][1]
+                win1 = _next_pop[i][0]
+                win2 = _next_pop[i][1]
+                # print(len(families[i]), len(_next_pop[i]), '\n', par1, '\n', par2, '\n', win1, '\n', win2, '\n')
+                for j in range(len(par1.x)):
+                    if par1[j] != par2[j] and win1[j] == win2[j]:
+                        selection_decisions[gen][win1[j]] += 1
 
         next_generation = Population(population_size, solution_length,
                                      generation=current_population.generation + 1, x=next_pop)
@@ -156,9 +161,10 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
 
 
 def plotMeasures():
-
     global selection_decisions
-    selection_decisions = [0,0] # TODO
+    global collect_data
+    collect_data = True
+    selection_decisions = []
 
     N = 200
     l = 40
@@ -170,11 +176,10 @@ def plotMeasures():
     gen_range = range(0, len(generations))
     # 1. "Plot the proportion prop(t) of bits-1 in the entire population as a function of the generation t."
     prop_1_bits = [np.average([sum(sol.x) / len(sol.x) for sol in gen]) for gen in generations]
+    prop_0_bits = [1 - x for x in prop_1_bits]
     # 2. "Plot the number of selection errors Err(t) and the number of correct selection decisions"
-    selection_errors = selection_decisions[0]
-    correct_selection = selection_decisions[1]
-    print(selection_errors)
-    print(correct_selection)
+    selection_errors = [d[0] for d in selection_decisions]
+    correct_selections = [d[1] for d in selection_decisions]
     # 3. "Plot the number of solutions in the population that are member of the respective schemata"
     no_1_schemata = [np.sum([1 for sol in gen if sol.x[0] == 1]) / N for gen in generations]
     fitni_1_schemata = [[fitness.score(sol) for sol in gen if sol.x[0] == 1] for gen in generations]
@@ -186,18 +191,29 @@ def plotMeasures():
 
     ax = plt.subplot()
     ax.plot(gen_range, prop_1_bits)
-    ax.set_xlabel("generation")
-    ax.set_ylabel("proportion of 1-bits in population")
+    ax.plot(gen_range, prop_0_bits)
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Proportion of bits in population")
     ax.set_xlim(0, len(generations)-1)
     ax.set_ylim((0,1))
+    ax.legend(["1-bit", "0-bit"])
     plt.show()
 
-    _, axes = plt.subplots(1, 2)
+    ax = plt.subplot()
+    ax.plot(gen_range, selection_errors)
+    ax.plot(gen_range, correct_selections)
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Selection decisions")
+    ax.set_xlim(0, len(generations)-1)
+    ax.legend(["selection errors", "correct selections"])
+    plt.show()
+
+    _, axes = plt.subplots(1, 2, constrained_layout = True) # figsize
     ax = axes[0]
     ax.plot(gen_range, no_1_schemata)
     ax.plot(gen_range, [1 - i for i in no_1_schemata])
-    ax.set_xlabel("generation")
-    ax.set_ylabel("proportion of solutions part of schemata")
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Proportion of solutions part of schemata")
     ax.set_xlim(0, len(generations)-1)
     ax.set_ylim(0, 1)
     ax.legend(["1**..** schemata", "0**..** schemata"])
@@ -207,8 +223,8 @@ def plotMeasures():
     # ax.plot(gen_range, avg_fitness_0_schemata)
     plt.errorbar(x=[x+0.1 for x in gen_range], y=avg_fitness_0_schemata, yerr=std_fitness_0_schemata)
     # small offset in x, such that standard deviations don't overlap
-    ax.set_xlabel("generation")
-    ax.set_ylabel("average fitness of schemata")
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Average fitness of schemata")
     ax.legend(["1**..** schemata", "0**..** schemata"])
     ax.set_xlim(0, len(gen_range)-1)
     plt.show()
@@ -219,7 +235,8 @@ if __name__ == "__main__":
     plotMeasures()
     quit()
 
-
+    global collect_data
+    collect_data = False
 
     print(f"Counting ones and Uniform crossover")
     fitness = CountingOne()
