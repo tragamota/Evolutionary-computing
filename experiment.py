@@ -84,8 +84,6 @@ def run_generation(population_size, solution_length, fitness, mutation):
 
 
 def run_experiment(fitness, mutation, population_size=10, max_population_size=1280, solution_length=40):
-    optimum_found = False
-
     current_population_size = population_size
     previous_population_size = population_size
 
@@ -93,73 +91,68 @@ def run_experiment(fitness, mutation, population_size=10, max_population_size=12
 
     while current_population_size <= max_population_size:
         successful_runs = []
-        for i in range(20):
+        for i in range(20): # 20 runs
             last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
             optimum_found_run = found_global_optimum(last_generation)
             successful_runs.append(optimum_found_run)
 
-        if np.sum(successful_runs) >= 19:
-            optimum_found = True
-            break
-
         print(current_population_size)
 
+        # at least 19 out of 20 runs succesful, break from this while-loop
+        if np.sum(successful_runs) >= 19:
+            break
+
+        # double population size
         if current_population_size < max_population_size:
             previous_population_size = current_population_size
             current_population_size *= 2
+        # except if reached 1280 population size and still no convergence: just stop
         else:
-            break
+            return False, np.sum(successful_runs), current_population_size
 
-    if not optimum_found and current_population_size == max_population_size:
-        return False, np.sum(successful_runs), current_population_size
 
     upperbound = current_population_size
     lowerbound = previous_population_size
 
-    optimum_found = False
-
-    generation_count = 0
-    starting_time = 0
-
     while (upperbound - lowerbound) > population_size:
-        generation_count = 0
         successful_runs = []
-        print(current_population_size)
         current_population_size = lowerbound + (upperbound - lowerbound) // 2
-        starting_time = time.perf_counter()
+
         for i in range(20):
             last_generation, generation_info, generations = run_generation(current_population_size, solution_length, fitness, mutation)
             optimum_found_run = found_global_optimum(last_generation)
-            if optimum_found_run:
-                generation_count += len(generations) / 20
             successful_runs.append(optimum_found_run)
+
+        print(current_population_size)
 
         if np.sum(successful_runs) >= 19:
-            optimum_found = True
             upperbound = current_population_size
         else:
-            optimum_found = False
             lowerbound = current_population_size
 
-    if not optimum_found:
-        current_population_size = upperbound
 
-        generation_count = 0
-        successful_runs = []
+    # Here, we have the optimal population size
+    # Lastly, do this last run again, now collecting info:
+    current_population_size = upperbound # 1. minimal population size
+    successful_runs = []
+    generation_count = [] # 2. average number of generations (+ 3. average number of fitness func evals)
+    run_times = [] # 4. average cpu time
+
+    for i in range(20):
         starting_time = time.perf_counter()
-        for i in range(20):
-            last_generation, generation_info, generations = run_generation(current_population_size, solution_length,
-                                                                           fitness, mutation)
-            optimum_found_run = found_global_optimum(last_generation)
-            generation_count += len(generations) / 20
-            successful_runs.append(optimum_found_run)
+        last_generation, generation_info, generations = run_generation(current_population_size, solution_length,
+                                                                        fitness, mutation)
+        end_time = time.perf_counter()
 
-    end_time = time.perf_counter()
+        optimum_found_run = found_global_optimum(last_generation)
+        successful_runs.append(optimum_found_run)
+        generation_count.append(len(generations))
+        run_times.append(end_time - starting_time)
 
-    return True, np.sum(successful_runs), current_population_size, generation_count, (end_time - starting_time) / 20
+    return True, np.sum(successful_runs), current_population_size, (generation_count, np.average(generation_count), np.std(generation_count)), (run_times, np.average(run_times), np.std(run_times))
 
 
-
+# only the last one - optimizing the CountingOnes function
 def plotMeasures():
     global selection_decisions
     global collect_data
@@ -232,11 +225,11 @@ def plotMeasures():
 
 if __name__ == "__main__":
 
-    plotMeasures()
-    quit()
+    # plotMeasures()
+    # quit()
 
     global collect_data
-    collect_data = False
+    collect_data = False # to make sure we don't collect unneeded data; plotMeasures already collects that
 
     print(f"Counting ones and Uniform crossover")
     fitness = CountingOne()
